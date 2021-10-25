@@ -1,0 +1,13 @@
+﻿{
+  "profiles": {
+    "TG.Game.Api": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Debug",
+        "ASPNETCORE_URLS": "http://localhost:61006"
+      },
+      "applicationUrl": "http://localhost:61006"
+    }
+  }
+}
