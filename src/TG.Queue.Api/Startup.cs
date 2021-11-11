@@ -1,23 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
 using TG.Core.App.Configuration;
 using TG.Core.App.Configuration.Auth;
 using TG.Core.App.InternalCalls;
 using TG.Core.App.Middlewares;
 using TG.Core.App.Swagger;
+using TG.Core.Db.Postgres;
 using TG.Core.Redis.Extensions;
+using TG.Queue.Api.Config;
+using TG.Queue.Api.Db;
 
 namespace TG.Queue.Api
 {
