@@ -1,7 +1,11 @@
 ﻿using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
+using TG.Core.App.OperationResults;
+using TG.Queue.Api.Application.Commands;
 using TG.Queue.Api.Models.Request;
+using TG.Queue.Api.Models.Response;
 
 namespace TG.Queue.Api.Controllers
 {
@@ -17,9 +21,12 @@ namespace TG.Queue.Api.Controllers
         }
 
         [HttpPost]
-        public async Task Enqueue([FromBody] EnqueueUserRequest request)
+        public async Task<ActionResult<EnqueueToBattleResponse>> Enqueue([FromBody] EnqueueUserRequest request)
         {
-            var cmd = new e
+            var cmd = new EnqueueUserCommand();
+            var result = await _mediator.Send(cmd);
+            return result.ToActionResult()
+                .Ok();
         }
     }
 }
