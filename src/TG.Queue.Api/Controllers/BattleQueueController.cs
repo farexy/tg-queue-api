@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,15 @@ namespace TG.Queue.Api.Controllers
         public async Task<ActionResult> Enqueue([FromBody] EnqueueUserRequest request)
         {
             var cmd = new EnqueueUserCommand(User.GetUserId(), request.BattleType);
+            var result = await _mediator.Send(cmd);
+            return result.ToActionResult()
+                .NoContent();
+        }
+        
+        [HttpDelete("{battleId}")]
+        public async Task<ActionResult> Dequeue([FromRoute] Guid battleId)
+        {
+            var cmd = new DequeueUserCommand(User.GetUserId(), battleId);
             var result = await _mediator.Send(cmd);
             return result.ToActionResult()
                 .NoContent();
