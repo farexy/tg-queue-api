@@ -1,16 +1,21 @@
 ﻿using System.Threading.Tasks;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using StackExchange.Redis;
+using TG.Core.App.Constants;
+using TG.Core.App.Extensions;
 using TG.Core.App.OperationResults;
 using TG.Queue.Api.Application.Commands;
+using TG.Queue.Api.Config;
 using TG.Queue.Api.Models.Request;
 using TG.Queue.Api.Models.Response;
 
 namespace TG.Queue.Api.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [ApiVersion(ApiVersions.V1)]
+    [Route(ServiceConst.RoutePrefix)]
+    [Authorize]    
     public class BattleQueueController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -21,12 +26,12 @@ namespace TG.Queue.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<EnqueueToBattleResponse>> Enqueue([FromBody] EnqueueUserRequest request)
+        public async Task<ActionResult> Enqueue([FromBody] EnqueueUserRequest request)
         {
-            var cmd = new EnqueueUserCommand();
+            var cmd = new EnqueueUserCommand(User.GetUserId(), request.BattleType);
             var result = await _mediator.Send(cmd);
             return result.ToActionResult()
-                .Ok();
+                .NoContent();
         }
     }
 }

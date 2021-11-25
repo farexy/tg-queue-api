@@ -9,10 +9,10 @@ using TG.Core.App.Configuration.Auth;
 using TG.Core.App.InternalCalls;
 using TG.Core.App.Middlewares;
 using TG.Core.App.Swagger;
-using TG.Core.Db.Postgres;
 using TG.Core.Redis.Extensions;
+using TG.Core.ServiceBus.Extensions;
+using TG.Core.ServiceBus.Messages;
 using TG.Queue.Api.Config;
-using TG.Queue.Api.Db;
 
 namespace TG.Queue.Api
 {
@@ -61,6 +61,9 @@ namespace TG.Queue.Api
             });
 
             services.AddTgRedis(Configuration);
+
+            services.AddServiceBus(Configuration)
+                .AddQueueProducer<PrepareBattleMessage>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

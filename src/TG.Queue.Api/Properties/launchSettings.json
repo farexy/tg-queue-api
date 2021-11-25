@@ -1,6 +1,6 @@
 ﻿{
   "profiles": {
-    "TG.Game.Api": {
+    "TG.Queue.Api": {
       "commandName": "Project",
       "launchBrowser": false,
       "environmentVariables": {

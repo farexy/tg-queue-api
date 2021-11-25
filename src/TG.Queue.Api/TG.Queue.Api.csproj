@@ -15,9 +15,14 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.13.1" />
-        <PackageReference Include="TG.Core.App" Version="1.0.18" />
+        <PackageReference Include="TG.Core.App" Version="1.0.21" />
         <PackageReference Include="TG.Core.Db.Postgres" Version="1.0.3" />
         <PackageReference Include="TG.Core.Redis" Version="1.0.3" />
+        <PackageReference Include="TG.Core.ServiceBus" Version="1.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\Response" />
     </ItemGroup>
 
 </Project>
