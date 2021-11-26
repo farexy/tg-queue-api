@@ -61,6 +61,7 @@ namespace TG.Queue.Api
             services.Configure<BattleSettings>(Configuration.GetSection(TgConfigs.BattleSettings));
 
             services.AddServiceClient<IBattleServersClient>(Configuration.GetServiceInternalUrl(TgServices.Manager));
+            services.AddServiceClient<IBattlesClient>(Configuration.GetServiceInternalUrl(TgServices.Game));
 
             services.AddTgSwagger(opt =>
             {

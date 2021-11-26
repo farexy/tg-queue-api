@@ -50,8 +50,9 @@ namespace TG.Queue.Api.Application.Commands
             {
                 var currentBattle = await _dbContext.Battles
                     .Include(b => b.Users)
-                    .FirstOrDefaultAsync(b => b.BattleType == request.BattleType && b.Open && b.UsersCount <= battleType.UsersCount, cancellationToken);
+                    .FirstOrDefaultAsync(b => b.BattleType == request.BattleType && b.Open && b.UsersCount <= battleType.UsersCount && b.ExpectedStartTime > _dateTimeProvider.UtcNow, cancellationToken);
 
+                int? expectedWaitingTimeSec = null;
                 if (currentBattle is null)
                 {
                     currentBattle = new Battle
@@ -69,6 +70,8 @@ namespace TG.Queue.Api.Application.Commands
                         BattleId = currentBattle.Id,
                         BattleType = request.BattleType
                     }));
+
+                    expectedWaitingTimeSec = battleType.ExpectedWaitingTimeSec;
                 }
 
                 currentBattle.UsersCount++;
@@ -82,7 +85,7 @@ namespace TG.Queue.Api.Application.Commands
                 return new EnqueueToBattleResponse
                 {
                     BattleId = currentBattle.Id,
-                    ExpectedWaitingTimeSec = battleType.ExpectedWaitingTimeSec,
+                    ExpectedWaitingTimeSec = expectedWaitingTimeSec ?? currentBattle.ExpectedStartTime.Subtract(_dateTimeProvider.UtcNow).Seconds,
                 };
             }
         }
