@@ -7,6 +7,7 @@ using TG.Core.App.Constants;
 using TG.Core.App.Extensions;
 using TG.Core.App.OperationResults;
 using TG.Queue.Api.Application.Commands;
+using TG.Queue.Api.Application.Query;
 using TG.Queue.Api.Config;
 using TG.Queue.Api.Models.Request;
 using TG.Queue.Api.Models.Response;
@@ -16,7 +17,7 @@ namespace TG.Queue.Api.Controllers
     [ApiController]
     [ApiVersion(ApiVersions.V1)]
     [Route(ServiceConst.RoutePrefix)]
-    [Authorize]    
+    [Authorize]
     public class BattleQueueController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -25,14 +26,23 @@ namespace TG.Queue.Api.Controllers
         {
             _mediator = mediator;
         }
-
-        [HttpPost]
-        public async Task<ActionResult> Enqueue([FromBody] EnqueueUserRequest request)
+        
+        [HttpGet("{battleId}")]
+        public async Task<ActionResult<BattleInfoResponse>> GetInfo([FromRoute] Guid battleId)
         {
-            var cmd = new EnqueueUserCommand(User.GetUserId(), request.BattleType);
+            var cmd = new GetBattleInfoQuery(battleId, User.GetUserId());
             var result = await _mediator.Send(cmd);
             return result.ToActionResult()
-                .NoContent();
+                .Ok();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<EnqueueToBattleResponse>> Enqueue([FromBody] EnqueueUserRequest request)
+        {
+            var cmd = new EnqueueUserCommand(User.GetUserId(), request.BattleType, request.ServerType);
+            var result = await _mediator.Send(cmd);
+            return result.ToActionResult()
+                .Ok();
         }
         
         [HttpDelete("{battleId}")]

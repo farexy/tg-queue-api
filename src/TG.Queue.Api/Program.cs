@@ -1,12 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using TG.Core.App.Configuration;
+using TG.Core.App.Configuration.TgConfig;
+using TG.Queue.Api.Config;
+using TG.Queue.Api.Helpers;
 
 namespace TG.Queue.Api
 {
@@ -20,6 +17,11 @@ namespace TG.Queue.Api
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureTgKeyVault()
+                .ConfigureAppConfiguration((ctx, configuration) =>
+                {
+                    TestBattles.Init(ctx.HostingEnvironment);
+                    configuration.AddTgConfigs(TgConfigs.BattleSettings);
+                })
                 //.ConfigureTgLogging(ServiceConst.ServiceName)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

@@ -6,13 +6,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TG.Core.App.Configuration;
 using TG.Core.App.Configuration.Auth;
+using TG.Core.App.Configuration.TgConfig;
 using TG.Core.App.InternalCalls;
 using TG.Core.App.Middlewares;
 using TG.Core.App.Swagger;
+using TG.Core.Db.Postgres;
 using TG.Core.Redis.Extensions;
 using TG.Core.ServiceBus.Extensions;
 using TG.Core.ServiceBus.Messages;
+using TG.Queue.Api.Application.SbHandlers;
 using TG.Queue.Api.Config;
+using TG.Queue.Api.Config.Options;
+using TG.Queue.Api.Db;
+using TG.Queue.Api.ServiceClients;
 
 namespace TG.Queue.Api
 {
@@ -36,7 +42,7 @@ namespace TG.Queue.Api
             //services.AddKubernetesTgApplicationInsights(Configuration);
             services.AddApiVersioning();
 
-            //services.AddPostgresDb<ApplicationDbContext>(Configuration, ServiceConst.ServiceName);
+            services.AddPostgresDb<ApplicationDbContext>(Configuration, ServiceConst.ServiceName);
             
             services.AddCors(cors => cors.AddDefaultPolicy(p =>
             {
@@ -52,6 +58,9 @@ namespace TG.Queue.Api
             services.AddTgServices();
 
             services.ConfigureInternalCalls(Configuration);
+            services.Configure<BattleSettings>(Configuration.GetSection(TgConfigs.BattleSettings));
+
+            services.AddServiceClient<IBattleServersClient>(Configuration.GetServiceInternalUrl(TgServices.Manager));
 
             services.AddTgSwagger(opt =>
             {
@@ -63,7 +72,8 @@ namespace TG.Queue.Api
             services.AddTgRedis(Configuration);
 
             services.AddServiceBus(Configuration)
-                .AddQueueProducer<PrepareBattleMessage>();
+                .AddQueueProducer<PrepareBattleMessage>()
+                .AddQueueConsumer<BattleEndedMessage, BattleEndedMessageHandler>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -91,6 +101,7 @@ namespace TG.Queue.Api
             {
                 endpoints.MapControllers();
                 endpoints.MapHealthChecks("/health");
+                endpoints.MapTgConfigs(ServiceConst.ServiceName);
             });
         }
     }
