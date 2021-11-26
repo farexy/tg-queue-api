@@ -1,0 +1,56 @@
+apiVersion: apps/v1 
+kind: Deployment 
+metadata: 
+  name: ##SERVICE_NAME##-deployment 
+  namespace: ##SERVICE_NAMESPACE##
+  labels: 
+    app: ##SERVICE_NAME##
+    environment: ##ENVIRONMENT##
+    aadpodidbinding: ##LOCATION##-##ENVIRONMENT##-tg-azure-identity
+spec: 
+  replicas: ##INSTANCE_REPLICAS##
+  selector: 
+    matchLabels: 
+      app: ##SERVICE_NAME##
+  template: 
+    metadata: 
+      labels: 
+        app: ##SERVICE_NAME##
+        environment: ##ENVIRONMENT##
+        aadpodidbinding: ##LOCATION##-##ENVIRONMENT##-tg-azure-identity
+    spec:
+      nodeSelector:
+        pool: services
+      tolerations:
+        - key: "ServicesOnly"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers: 
+      - name: ##SERVICE_NAME##
+        image: ##CONTAINER_REGISTRY##/##SERVICE_NAME##:##IMAGE_TAG##
+        env: 
+          - name: ASPNETCORE_ENVIRONMENT  
+            value: '##ASPNETCORE_ENVIRONMENT##'
+          - name: SERVICE_NAME  
+            value: '##SERVICE_NAME##'
+        ports: 
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "##MEMORY_REQUEST##"
+            cpu: "##CPU_REQUEST##"
+          limits:
+            memory: "##MEMORY_LIMIT##"
+            cpu: "##CPU_LIMIT##"
+        # livenessProbe:
+        #   tcpSocket:
+        #     port: 80
+        #   initialDelaySeconds: 30
+        #   periodSeconds: 5
+        # readinessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 80
+        #   initialDelaySeconds: 25
+        #   periodSeconds: 10
+        #   timeoutSeconds: 5

@@ -1,0 +1,108 @@
+stages:
+  - test
+  - release
+  - deploy_dev
+
+variables:
+  CONTAINER_REGISTRY: eastus2tgacr.azurecr.io
+  SERVICE_NAME: queue-api
+  SERVICE_NAMESPACE: 'tg'
+  LOCATION: 'eastus2'
+  SERVICE_ROUTE_PREFIX: 'queue'
+  TENANT_ID: 076a5d2a-ce27-485a-a9d1-74ee993836cb
+
+.code_prep:
+  before_script:
+    - cd src
+    - sed 's/##CI_JOB_TOKEN##/'$CI_JOB_TOKEN'/g' .nuget.config > nuget.config
+
+'Test code':
+  extends: .code_prep
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:5.0
+  script:
+      - dotnet build
+  only:
+    - merge_requests
+
+.release:
+  extends: .code_prep
+  image: docker:18.09.7
+  services:
+    - docker:18.09.7-dind
+  script:
+      - docker login $CONTAINER_REGISTRY -u $SERVICE_USER -p $SERVICE_USER_PWD
+      - docker build -t $CONTAINER_REGISTRY/$SERVICE_NAME:$CI_PIPELINE_IID .
+      - docker push $CONTAINER_REGISTRY/$SERVICE_NAME:$CI_PIPELINE_IID
+
+'Publish docker image':
+  stage: release
+  extends: .release
+  only:
+    - master
+
+.deploy:
+  image: eastus2tgacr.azurecr.io/apicirunner:latest
+
+  script:
+    - sed -i -e 's/##SERVICE_NAMESPACE##/'$SERVICE_NAMESPACE'/g' k8s/namespace.yaml
+    - sed -i -e 's/##ENVIRONMENT##/'$ENVIRONMENT'/g' k8s/namespace.yaml
+
+    - sed -i -e 's/##SERVICE_NAME##/'$SERVICE_NAME'/g' k8s/deployment.yaml
+    - sed -i -e 's/##LOCATION##/'$LOCATION'/g' k8s/deployment.yaml
+    - sed -i -e 's/##INSTANCE_REPLICAS##/'$INSTANCE_REPLICAS'/g' k8s/deployment.yaml
+    - sed -i -e 's/##CONTAINER_REGISTRY##/'$CONTAINER_REGISTRY'/g' k8s/deployment.yaml
+    - sed -i -e 's/##IMAGE_TAG##/'$CI_PIPELINE_IID'/g' k8s/deployment.yaml
+    - sed -i -e 's/##ASPNETCORE_ENVIRONMENT##/'$ASPNETCORE_ENVIRONMENT'/g' k8s/deployment.yaml
+    - sed -i -e 's/##SERVICE_NAMESPACE##/'$SERVICE_NAMESPACE'/g' k8s/deployment.yaml
+    - sed -i -e 's/##ENVIRONMENT##/'$ENVIRONMENT'/g' k8s/deployment.yaml
+    - sed -i -e 's/##MEMORY_REQUEST##/'$MEMORY_REQUEST'/g' k8s/deployment.yaml
+    - sed -i -e 's/##CPU_REQUEST##/'$CPU_REQUEST'/g' k8s/deployment.yaml
+    - sed -i -e 's/##MEMORY_LIMIT##/'$MEMORY_LIMIT'/g' k8s/deployment.yaml
+    - sed -i -e 's/##CPU_LIMIT##/'$CPU_LIMIT'/g' k8s/deployment.yaml
+    - sed -i -e 's/##HEALTH_CHECK_TIMEOUT##/'$HEALTH_CHECK_TIMEOUT'/g' k8s/deployment.yaml
+    
+    - sed -i -e 's/##SERVICE_NAME##/'$SERVICE_NAME'/g' k8s/service.yaml
+    - sed -i -e 's/##SERVICE_NAMESPACE##/'$SERVICE_NAMESPACE'/g' k8s/service.yaml
+    - sed -i -e 's/##ENVIRONMENT##/'$ENVIRONMENT'/g' k8s/service.yaml
+
+    - sed -i -e 's/##SERVICE_NAME##/'$SERVICE_NAME'/g' k8s/autoscale.yaml
+    - sed -i -e 's/##ENVIRONMENT##/'$ENVIRONMENT'/g' k8s/autoscale.yaml
+    - sed -i -e 's/##SERVICE_NAMESPACE##/'$SERVICE_NAMESPACE'/g' k8s/autoscale.yaml
+    - sed -i -e 's/##MIN_REPLICAS##/'$MIN_REPLICAS'/g' k8s/autoscale.yaml
+    - sed -i -e 's/##MAX_REPLICAS##/'$MAX_REPLICAS'/g' k8s/autoscale.yaml
+    - sed -i -e 's/##CPU_SCALE_THRESHOLD##/'$CPU_SCALE_THRESHOLD'/g' k8s/autoscale.yaml
+    - sed -i -e 's/##MEMORY_SCALE_THRESHOLD##/'$MEMORY_SCALE_THRESHOLD'/g' k8s/autoscale.yaml
+
+    - sed -i -e 's/##SERVICE_NAME##/'$SERVICE_NAME'/g' k8s/ingress_route.yaml
+    - sed -i -e 's/##SERVICE_NAMESPACE##/'$SERVICE_NAMESPACE'/g' k8s/ingress_route.yaml
+    - sed -i -e 's/##ENVIRONMENT##/'$ENVIRONMENT'/g' k8s/ingress_route.yaml
+    - sed -i -e 's/##SERVICE_ROUTE_PREFIX##/'$SERVICE_ROUTE_PREFIX'/g' k8s/ingress_route.yaml
+
+    - az login --service-principal -u $SERVICE_USER -p $SERVICE_USER_PWD --tenant $TENANT_ID
+    - az aks get-credentials -n $CLUSTER_NAME -g tg-$ENVIRONMENT
+    - kubectl apply -f k8s/namespace.yaml
+    - kubectl apply -f k8s/deployment.yaml
+    - kubectl apply -f k8s/service.yaml
+    - kubectl apply -f k8s/autoscale.yaml
+    - kubectl apply -f k8s/ingress_route.yaml
+
+'DEV Deploy to cluster': 
+  stage: deploy_dev
+  extends: .deploy
+  environment:
+    name: dev
+  variables:
+    ENVIRONMENT: dev
+    ASPNETCORE_ENVIRONMENT: 'Development'
+    MIN_REPLICAS: 1
+    MAX_REPLICAS: 2
+    CPU_REQUEST: '100m'
+    CPU_LIMIT: '300m'
+    CPU_SCALE_THRESHOLD: '225m'
+    MEMORY_REQUEST: '350M'
+    MEMORY_LIMIT: '500M'
+    MEMORY_SCALE_THRESHOLD: '425M'
+    CLUSTER_NAME: eastus2-dev-tg-cluster
+  only:
+    - master
