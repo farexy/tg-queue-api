@@ -15,7 +15,9 @@ using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Db;
 using TG.Queue.Api.Entities;
 using TG.Queue.Api.Entities.Enums;
+using TG.Queue.Api.Errors;
 using TG.Queue.Api.Models.Response;
+using TG.Queue.Api.ServiceClients;
 
 namespace TG.Queue.Api.Application.Commands
 {
@@ -28,19 +30,33 @@ namespace TG.Queue.Api.Application.Commands
         private readonly IDistributedLock _distributedLock;
         private readonly BattleSettings _battleSettings;
         private readonly IDateTimeProvider _dateTimeProvider;
+        private readonly IUsersClient _usersClient;
 
         public EnqueueUserCommandHandler(IQueueProducer<PrepareBattleMessage> queueProducer, IDistributedLock distributedLock,
-            ApplicationDbContext dbContext, IOptionsSnapshot<BattleSettings> battleSettings, IDateTimeProvider dateTimeProvider)
+            ApplicationDbContext dbContext, IOptionsSnapshot<BattleSettings> battleSettings, IDateTimeProvider dateTimeProvider,
+            IUsersClient usersClient)
         {
             _queueProducer = queueProducer;
             _distributedLock = distributedLock;
             _dbContext = dbContext;
             _dateTimeProvider = dateTimeProvider;
+            _usersClient = usersClient;
             _battleSettings = battleSettings.Value;
         }
 
         public async Task<OperationResult<EnqueueToBattleResponse>> Handle(EnqueueUserCommand request, CancellationToken cancellationToken)
         {
+            var moneyCheck = await _usersClient.CheckMoneyAsync(request.UserId, request.BattleType);
+            if (moneyCheck.HasError)
+            {
+                return moneyCheck.Error!;
+            }
+
+            if (!moneyCheck.Result!.Enough)
+            {
+                return AppErrors.UserNotEnoughMoney;
+            }
+            
             if (request.ServerType.In(BattleServerType.Local, BattleServerType.Static))
             {
                 return TestBattleResult(request);

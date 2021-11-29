@@ -128,7 +128,8 @@ namespace TG.Queue.Api.Application.Query
             {
                 Id = battleId,
                 ServerIp = settings.Ip,
-                ServerPort = settings.Port
+                ServerPort = settings.Port,
+                Ready = true
             };
         }
     }

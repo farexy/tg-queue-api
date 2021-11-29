@@ -9,6 +9,15 @@ namespace TG.Queue.Api.Config.Options
         public Dictionary<string, BattleTypeSettings> BattleTypes { get; set; } = default!;
         public Dictionary<BattleServerType, TestServerSettings> TestServers { get; set; } = default!;
     }
+    
+    public class BattleTypeSettings
+    {
+        public int UsersCount { get; set; }
+        
+        public int ExpectedWaitingTimeSec { get; set; }
+        
+        public int CostCoins { get; set; }
+    }
 
     public class TestServerSettings
     {

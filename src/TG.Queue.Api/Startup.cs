@@ -62,6 +62,7 @@ namespace TG.Queue.Api
 
             services.AddServiceClient<IBattleServersClient>(Configuration.GetServiceInternalUrl(TgServices.Manager));
             services.AddServiceClient<IBattlesClient>(Configuration.GetServiceInternalUrl(TgServices.Game));
+            services.AddServiceClient<IUsersClient>(Configuration.GetServiceInternalUrl(TgServices.Game));
 
             services.AddTgSwagger(opt =>
             {
