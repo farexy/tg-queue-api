@@ -10,7 +10,7 @@ using TG.Queue.Api.Db;
 namespace TG.Queue.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20211126172140_Initial")]
+    [Migration("20211201192557_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -41,10 +41,6 @@ namespace TG.Queue.Api.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("expected_start_time");
 
-                    b.Property<DateTime>("LastUpdate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("last_update");
-
                     b.Property<bool>("Open")
                         .HasColumnType("boolean")
                         .HasColumnName("open");
@@ -57,15 +53,8 @@ namespace TG.Queue.Api.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("server_port");
 
-                    b.Property<int>("UsersCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("users_count");
-
                     b.HasKey("Id")
                         .HasName("pk_battles");
-
-                    b.HasIndex("BattleType")
-                        .HasDatabaseName("ix_battles_battle_type");
 
                     b.ToTable("battles");
                 });

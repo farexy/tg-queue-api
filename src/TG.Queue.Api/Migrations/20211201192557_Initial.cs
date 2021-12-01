@@ -16,9 +16,7 @@ namespace TG.Queue.Api.Migrations
                     battle_type = table.Column<string>(type: "text", nullable: false),
                     server_port = table.Column<int>(type: "integer", nullable: true),
                     server_ip = table.Column<string>(type: "text", nullable: true),
-                    users_count = table.Column<int>(type: "integer", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
-                    last_update = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     expected_start_time = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
@@ -43,11 +41,6 @@ namespace TG.Queue.Api.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_battles_battle_type",
-                table: "battles",
-                column: "battle_type");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

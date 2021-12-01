@@ -16,6 +16,7 @@ using TG.Queue.Api.Helpers;
 using TG.Queue.Api.Models.Dto;
 using TG.Queue.Api.Models.Response;
 using TG.Queue.Api.ServiceClients;
+using TG.Queue.Api.Services;
 
 namespace TG.Queue.Api.Application.Query
 {
@@ -69,7 +70,7 @@ namespace TG.Queue.Api.Application.Query
                         ExpectedWaitingTimeSec = battle.ExpectedStartTime.Subtract(_dateTimeProvider.UtcNow).Seconds,
                     };
                 }
-                
+
                 await using (await _distributedLock.AcquireLockAsync(battle.Id.ToString()))
                 {
                     battle = await _dbContext.Battles
@@ -98,7 +99,6 @@ namespace TG.Queue.Api.Application.Query
                         battle.Open = false;
                         battle.ServerIp = battleServer.LoadBalancerIp;
                         battle.ServerPort = battleServer.LoadBalancerPort;
-                        battle.LastUpdate = _dateTimeProvider.UtcNow;
 
                         await _dbContext.SaveChangesAtomicallyAsync(() =>
                             _battlesClient.CreateAsync(new CreateBattleDto

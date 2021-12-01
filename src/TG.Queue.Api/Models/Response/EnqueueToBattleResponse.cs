@@ -7,5 +7,7 @@ namespace TG.Queue.Api.Models.Response
         public Guid BattleId { get; set; }
         
         public int ExpectedWaitingTimeSec { get; set; }
+        
+        public long ApproximateCurrentUsersCount { get; set; }
     }
 }

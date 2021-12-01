@@ -4,23 +4,23 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TG.Core.App.OperationResults;
-using TG.Core.ServiceBus;
-using TG.Core.ServiceBus.Messages;
 using TG.Queue.Api.Db;
 using TG.Queue.Api.Errors;
-using TG.Queue.Api.Models.Response;
+using TG.Queue.Api.Services;
 
 namespace TG.Queue.Api.Application.Commands
 {
-    public record DequeueUserCommand(Guid UserId, Guid BattleId) : IRequest<OperationResult>;
+    public record DequeueUserCommand(Guid UserId, string BattleType, Guid BattleId) : IRequest<OperationResult>;
     
     public class DequeueUserCommandHandler : IRequestHandler<DequeueUserCommand, OperationResult>
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly IBattlesCache _battlesCache;
 
-        public DequeueUserCommandHandler(ApplicationDbContext dbContext)
+        public DequeueUserCommandHandler(ApplicationDbContext dbContext, IBattlesCache battlesCache)
         {
             _dbContext = dbContext;
+            _battlesCache = battlesCache;
         }
 
         public async Task<OperationResult> Handle(DequeueUserCommand request, CancellationToken cancellationToken)
@@ -33,7 +33,8 @@ namespace TG.Queue.Api.Application.Commands
                 return AppErrors.NotFound;
             }
 
-            battleUser.Battle!.UsersCount--;
+            await _battlesCache.DecrementCurrentUsersAsync(request.BattleType, 1);
+
             _dbContext.Remove(battleUser);
             await _dbContext.SaveChangesAsync(cancellationToken);
             

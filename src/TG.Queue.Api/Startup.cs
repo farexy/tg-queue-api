@@ -19,6 +19,7 @@ using TG.Queue.Api.Config;
 using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Db;
 using TG.Queue.Api.ServiceClients;
+using TG.Queue.Api.Services;
 
 namespace TG.Queue.Api
 {
@@ -72,6 +73,7 @@ namespace TG.Queue.Api
             });
 
             services.AddTgRedis(Configuration);
+            services.AddTransient<IBattlesCache, BattlesCache>();
 
             services.AddServiceBus(Configuration)
                 .AddQueueProducer<PrepareBattleMessage>()

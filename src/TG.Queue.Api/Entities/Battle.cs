@@ -14,13 +14,9 @@ namespace TG.Queue.Api.Entities
         public int? ServerPort { get; set; }
         
         public string? ServerIp { get; set; }
-        
-        public int UsersCount { get; set; }
 
         public DateTime CreatedAt { get; set; }
-        
-        public DateTime LastUpdate { get; set; }
-        
+
         public DateTime ExpectedStartTime { get; set; }
         
         public IReadOnlyList<BattleUser>? Users { get; set; }
