@@ -84,7 +84,7 @@ namespace TG.Queue.Api.Application.Query
                         }
 
                         var battleServer = res.Result!;
-                        if (battleServer.State is BattleServerState.Initializing)
+                        if (battleServer.State is BattleServerState.Initializing || battleServer.LoadBalancerIp is null)
                         {
                             var settings = _battleSettings.BattleTypes[battle.BattleType];
                             return new BattleInfoResponse
