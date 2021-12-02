@@ -10,14 +10,12 @@ using TG.Core.App.Configuration.TgConfig;
 using TG.Core.App.InternalCalls;
 using TG.Core.App.Middlewares;
 using TG.Core.App.Swagger;
-using TG.Core.Db.Postgres;
 using TG.Core.Redis.Extensions;
 using TG.Core.ServiceBus.Extensions;
 using TG.Core.ServiceBus.Messages;
 using TG.Queue.Api.Application.SbHandlers;
 using TG.Queue.Api.Config;
 using TG.Queue.Api.Config.Options;
-using TG.Queue.Api.Db;
 using TG.Queue.Api.ServiceClients;
 using TG.Queue.Api.Services;
 
@@ -43,8 +41,6 @@ namespace TG.Queue.Api
             //services.AddKubernetesTgApplicationInsights(Configuration);
             services.AddApiVersioning();
 
-            services.AddPostgresDb<ApplicationDbContext>(Configuration, ServiceConst.ServiceName);
-            
             services.AddCors(cors => cors.AddDefaultPolicy(p =>
             {
                 p.AllowAnyHeader();

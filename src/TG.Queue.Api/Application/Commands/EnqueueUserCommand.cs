@@ -6,12 +6,10 @@ using Microsoft.Extensions.Options;
 using TG.Core.App.Extensions;
 using TG.Core.App.OperationResults;
 using TG.Core.App.Services;
-using TG.Core.Db.Postgres.Extensions;
 using TG.Core.Redis.DistributedLock;
 using TG.Core.ServiceBus;
 using TG.Core.ServiceBus.Messages;
 using TG.Queue.Api.Config.Options;
-using TG.Queue.Api.Db;
 using TG.Queue.Api.Entities;
 using TG.Queue.Api.Entities.Enums;
 using TG.Queue.Api.Errors;
@@ -25,7 +23,6 @@ namespace TG.Queue.Api.Application.Commands
     
     public class EnqueueUserCommandHandler : IRequestHandler<EnqueueUserCommand, OperationResult<EnqueueToBattleResponse>>
     {
-        private readonly ApplicationDbContext _dbContext;
         private readonly IQueueProducer<PrepareBattleMessage> _queueProducer;
         private readonly IDistributedLock _distributedLock;
         private readonly BattleSettings _battleSettings;
@@ -34,12 +31,11 @@ namespace TG.Queue.Api.Application.Commands
         private readonly IBattlesCache _battlesCache;
 
         public EnqueueUserCommandHandler(IQueueProducer<PrepareBattleMessage> queueProducer, IDistributedLock distributedLock,
-            ApplicationDbContext dbContext, IOptionsSnapshot<BattleSettings> battleSettings, IDateTimeProvider dateTimeProvider,
+            IOptionsSnapshot<BattleSettings> battleSettings, IDateTimeProvider dateTimeProvider,
             IUsersClient usersClient, IBattlesCache battlesCache)
         {
             _queueProducer = queueProducer;
             _distributedLock = distributedLock;
-            _dbContext = dbContext;
             _dateTimeProvider = dateTimeProvider;
             _usersClient = usersClient;
             _battlesCache = battlesCache;
@@ -71,12 +67,12 @@ namespace TG.Queue.Api.Application.Commands
             CurrentBattleInfo? currentBattleInfo;
             if (currentUsersCount == 1 || currentUsersCount > battleSettings.UsersCount)
             {
-                currentBattleInfo = await TryCreateBattle(request.BattleType, battleSettings, cancellationToken);
+                currentBattleInfo = await TryCreateBattle(request.BattleType, battleSettings);
             }
             else
             {
                 currentBattleInfo = await _battlesCache.GetCurrentAsync(request.BattleType)
-                                    ?? await TryCreateBattle(request.BattleType, battleSettings, cancellationToken);
+                                    ?? await TryCreateBattle(request.BattleType, battleSettings);
             }
 
             await _battlesCache.AddBattleUserAsync(currentBattleInfo.Id, request.UserId);
@@ -89,7 +85,7 @@ namespace TG.Queue.Api.Application.Commands
             };
         }
 
-        private async Task<CurrentBattleInfo> TryCreateBattle(string battleType, BattleTypeSettings battleSettings, CancellationToken cancellationToken)
+        private async Task<CurrentBattleInfo> TryCreateBattle(string battleType, BattleTypeSettings battleSettings)
         {
             await using (await _distributedLock.AcquireLockAsync(battleType))
             {
@@ -104,7 +100,6 @@ namespace TG.Queue.Api.Application.Commands
                         CreatedAt = _dateTimeProvider.UtcNow,
                         ExpectedStartTime = _dateTimeProvider.UtcNow.AddSeconds(battleSettings.ExpectedWaitingTimeSec)
                     };
-                    await _dbContext.AddAsync(newBattle, cancellationToken);
 
                     currentBattleInfo = new CurrentBattleInfo
                     {
@@ -112,17 +107,18 @@ namespace TG.Queue.Api.Application.Commands
                         ExpectedStartTime = newBattle.ExpectedStartTime,
                     };
                     await Task.WhenAll(
+                        _queueProducer.SendMessageAsync(
+                            new PrepareBattleMessage
+                            {
+                                BattleId = newBattle.Id,
+                                BattleType = battleType
+                            }),
                         _battlesCache.InitCurrentUsersAsync(battleType, 1,
                             battleSettings.ExpectedWaitingTimeSec),
                         _battlesCache.SetCurrentAsync(battleType, currentBattleInfo,
-                            battleSettings.ExpectedWaitingTimeSec)
+                            battleSettings.ExpectedWaitingTimeSec),
+                        _battlesCache.SetAsync(newBattle)
                     );
-                    await _dbContext.SaveChangesAtomicallyAsync(() => _queueProducer.SendMessageAsync(
-                        new PrepareBattleMessage
-                        {
-                            BattleId = newBattle.Id,
-                            BattleType = battleType
-                        }));
                 }
 
                 return currentBattleInfo;

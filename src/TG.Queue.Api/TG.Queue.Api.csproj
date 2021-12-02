@@ -16,7 +16,6 @@
         </PackageReference>
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.13.1" />
         <PackageReference Include="TG.Core.App" Version="1.0.22" />
-        <PackageReference Include="TG.Core.Db.Postgres" Version="1.0.3" />
         <PackageReference Include="TG.Core.Redis" Version="1.0.3" />
         <PackageReference Include="TG.Core.ServiceBus" Version="1.0.11" />
     </ItemGroup>

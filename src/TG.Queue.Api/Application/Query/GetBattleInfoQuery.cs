@@ -3,14 +3,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TG.Core.App.OperationResults;
 using TG.Core.App.Services;
-using TG.Core.Db.Postgres.Extensions;
 using TG.Core.Redis.DistributedLock;
 using TG.Queue.Api.Config.Options;
-using TG.Queue.Api.Db;
 using TG.Queue.Api.Errors;
 using TG.Queue.Api.Helpers;
 using TG.Queue.Api.Models.Dto;
@@ -24,7 +21,6 @@ namespace TG.Queue.Api.Application.Query
     
     public class GetBattleInfoQueryHandler : IRequestHandler<GetBattleInfoQuery, OperationResult<BattleInfoResponse>>
     {
-        private readonly ApplicationDbContext _dbContext;
         private readonly IDistributedLock _distributedLock;
         private readonly BattleSettings _battleSettings;
         private readonly IDateTimeProvider _dateTimeProvider;
@@ -32,10 +28,9 @@ namespace TG.Queue.Api.Application.Query
         private readonly IBattlesClient _battlesClient;
         private readonly IBattlesCache _battlesCache;
 
-        public GetBattleInfoQueryHandler(ApplicationDbContext dbContext, IDistributedLock distributedLock, IOptionsSnapshot<BattleSettings> battleSettings,
+        public GetBattleInfoQueryHandler(IDistributedLock distributedLock, IOptionsSnapshot<BattleSettings> battleSettings,
             IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient, IBattlesCache battlesCache)
         {
-            _dbContext = dbContext;
             _distributedLock = distributedLock;
             _battleSettings = battleSettings.Value;
             _dateTimeProvider = dateTimeProvider;
@@ -55,9 +50,8 @@ namespace TG.Queue.Api.Application.Query
             {
                 return AppErrors.NotFound;
             }
-            var battle = await _dbContext.Battles
-                .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == request.BattleId, cancellationToken);
+
+            var battle = await _battlesCache.FindAsync(request.BattleId);
             if (battle is null)
             {
                 return AppErrors.NotFound;
@@ -65,7 +59,7 @@ namespace TG.Queue.Api.Application.Query
 
             if (battle.Open)
             {
-                if (_dateTimeProvider.UtcNow < battle.ExpectedStartTime)
+                if (_dateTimeProvider.UtcNow < battle.ExpectedStartTime.ToUniversalTime())
                 {
                     return new BattleInfoResponse
                     {
@@ -77,9 +71,8 @@ namespace TG.Queue.Api.Application.Query
 
                 await using (await _distributedLock.AcquireLockAsync(battle.Id.ToString()))
                 {
-                    battle = await _dbContext.Battles
-                        .FirstOrDefaultAsync(b => b.Id == battle.Id, cancellationToken);
-                    if (battle.Open)
+                    battle = await _battlesCache.FindAsync(request.BattleId)!;
+                    if (battle is not null && battle.Open)
                     {
                         var res = await _battleServersClient.GetBattleServerAsync(battle.Id);
                         if (res.HasError)
@@ -104,7 +97,8 @@ namespace TG.Queue.Api.Application.Query
                         battle.ServerPort = battleServer.LoadBalancerPort;
 
                         var userIds = await _battlesCache.GetBattleUsers(battle.Id);
-                        await _dbContext.SaveChangesAtomicallyAsync(() =>
+                        await Task.WhenAll(
+                            _battlesCache.SetAsync(battle),
                             _battlesClient.CreateAsync(new CreateBattleDto
                             {
                                 BattleId = battle.Id,
@@ -117,7 +111,7 @@ namespace TG.Queue.Api.Application.Query
 
             return new BattleInfoResponse
             {
-                Id = battle.Id,
+                Id = battle!.Id,
                 ServerIp = battle.ServerIp,
                 ServerPort = battle.ServerPort,
                 Ready = true,

@@ -13,14 +13,15 @@ namespace TG.Queue.Api.Services
         Task InitCurrentUsersAsync(string battleType, int userCount, int expirationSec);
         Task<long> IncrementCurrentUsersAsync(string battleType, int userCount);
         Task DecrementCurrentUsersAsync(string battleType, int userCount);
-        Task<Battle?> FindAsync(Guid battleId);
         Task SetCurrentAsync(string battleType, CurrentBattleInfo battle, int expirationSec);
         Task<CurrentBattleInfo?> GetCurrentAsync(string battleType);
+        Task<Battle?> FindAsync(Guid battleId);
+        Task SetAsync(Battle battle);
         Task AddBattleUserAsync(Guid battleId, Guid userId);
         Task RemoveBattleUserAsync(Guid battleId, Guid userId);
         Task<bool> IsUserInBattleAsync(Guid battleId, Guid userId);
         Task<IEnumerable<Guid>> GetBattleUsers(Guid battleId);
-        Task ClearBattleUsersAsync(Guid battleId);
+        Task ClearBattleAsync(Guid battleId);
     }
 
     public class BattlesCache : IBattlesCache
@@ -28,6 +29,7 @@ namespace TG.Queue.Api.Services
         private const string CurrentBattlePrefix = "q_current_battle_";
         private const string CurrentUsersPrefix = "q_current_battle_users_";
         private const string BattleUsersPrefix = "q_battle_users_";
+        private const string BattlePrefix = "q_battle_";
         private readonly IDatabase _redis;
 
         public BattlesCache(IDatabase redis)
@@ -52,8 +54,14 @@ namespace TG.Queue.Api.Services
 
         public async Task<Battle?> FindAsync(Guid battleId)
         {
-            var data = await _redis.StringGetAsync(CurrentBattlePrefix + battleId);
+            var data = await _redis.StringGetAsync(BattlePrefix + battleId);
             return data.HasValue ? TgJsonSerializer.Deserialize<Battle>(data) : null;
+        }
+
+        public Task SetAsync(Battle battle)
+        {
+            const int battleExpirationMin = 1;
+            return _redis.StringSetAsync(BattlePrefix + battle.Id, TgJsonSerializer.Serialize(battle), TimeSpan.FromMinutes(battleExpirationMin));
         }
 
         public Task SetCurrentAsync(string battleType, CurrentBattleInfo battle, int expirationSec)
@@ -89,9 +97,11 @@ namespace TG.Queue.Api.Services
             return members.Select(id => Guid.Parse(id));
         }
         
-        public Task ClearBattleUsersAsync(Guid battleId)
+        public Task ClearBattleAsync(Guid battleId)
         {
-            return _redis.KeyDeleteAsync(BattleUsersPrefix + battleId);
+            return Task.WhenAll(
+                _redis.KeyDeleteAsync(BattlePrefix + battleId),
+                _redis.KeyDeleteAsync(BattleUsersPrefix + battleId));
         }
     }
 }
