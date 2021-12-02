@@ -30,9 +30,10 @@ namespace TG.Queue.Api.Application.Query
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IBattleServersClient _battleServersClient;
         private readonly IBattlesClient _battlesClient;
+        private readonly IBattlesCache _battlesCache;
 
         public GetBattleInfoQueryHandler(ApplicationDbContext dbContext, IDistributedLock distributedLock, IOptionsSnapshot<BattleSettings> battleSettings,
-            IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient)
+            IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient, IBattlesCache battlesCache)
         {
             _dbContext = dbContext;
             _distributedLock = distributedLock;
@@ -40,6 +41,7 @@ namespace TG.Queue.Api.Application.Query
             _dateTimeProvider = dateTimeProvider;
             _battleServersClient = battleServersClient;
             _battlesClient = battlesClient;
+            _battlesCache = battlesCache;
         }
 
         public async Task<OperationResult<BattleInfoResponse>> Handle(GetBattleInfoQuery request, CancellationToken cancellationToken)
@@ -49,16 +51,18 @@ namespace TG.Queue.Api.Application.Query
                 return TestBattleResult(request.BattleId);
             }
 
-            var battleInfo = await _dbContext.BattleUsers
-                .Include(bu => bu.Battle)
+            if (!await _battlesCache.IsUserInBattleAsync(request.BattleId, request.UserId))
+            {
+                return AppErrors.NotFound;
+            }
+            var battle = await _dbContext.Battles
                 .AsNoTracking()
-                .FirstOrDefaultAsync(bu => bu.BattleId == request.BattleId && bu.UserId == request.UserId, cancellationToken);
-            if (battleInfo is null)
+                .FirstOrDefaultAsync(b => b.Id == request.BattleId, cancellationToken);
+            if (battle is null)
             {
                 return AppErrors.NotFound;
             }
 
-            var battle = battleInfo.Battle!;
             if (battle.Open)
             {
                 if (_dateTimeProvider.UtcNow < battle.ExpectedStartTime)
@@ -74,7 +78,6 @@ namespace TG.Queue.Api.Application.Query
                 await using (await _distributedLock.AcquireLockAsync(battle.Id.ToString()))
                 {
                     battle = await _dbContext.Battles
-                        .Include(b => b.Users)
                         .FirstOrDefaultAsync(b => b.Id == battle.Id, cancellationToken);
                     if (battle.Open)
                     {
@@ -100,12 +103,13 @@ namespace TG.Queue.Api.Application.Query
                         battle.ServerIp = battleServer.LoadBalancerIp;
                         battle.ServerPort = battleServer.LoadBalancerPort;
 
+                        var userIds = await _battlesCache.GetBattleUsers(battle.Id);
                         await _dbContext.SaveChangesAtomicallyAsync(() =>
                             _battlesClient.CreateAsync(new CreateBattleDto
                             {
                                 BattleId = battle.Id,
                                 BattleType = battle.BattleType,
-                                UserIds = battle.Users!.Select(u => u.UserId),
+                                UserIds = userIds,
                             }));
                     }
                 }

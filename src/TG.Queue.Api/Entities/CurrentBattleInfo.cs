@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TG.Queue.Api.Entities.Cache
+namespace TG.Queue.Api.Entities
 {
     public class CurrentBattleInfo
     {

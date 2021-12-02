@@ -9,6 +9,7 @@ namespace TG.Queue.Api.Db.EfConfiguration
         public void Configure(EntityTypeBuilder<Battle> entity)
         {
             entity.HasKey(b => b.Id);
+            entity.HasIndex(b => b.BattleType);
         }
     }
 }

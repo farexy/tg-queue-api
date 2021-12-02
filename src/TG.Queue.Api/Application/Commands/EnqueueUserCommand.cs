@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.Extensions.Options;
-using TG.Core.App.Exceptions;
 using TG.Core.App.Extensions;
 using TG.Core.App.OperationResults;
 using TG.Core.App.Services;
@@ -14,7 +13,6 @@ using TG.Core.ServiceBus.Messages;
 using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Db;
 using TG.Queue.Api.Entities;
-using TG.Queue.Api.Entities.Cache;
 using TG.Queue.Api.Entities.Enums;
 using TG.Queue.Api.Errors;
 using TG.Queue.Api.Models.Response;
@@ -81,12 +79,7 @@ namespace TG.Queue.Api.Application.Commands
                                     ?? await TryCreateBattle(request.BattleType, battleSettings, cancellationToken);
             }
 
-            await _dbContext.AddAsync(new BattleUser
-            {
-                UserId = request.UserId,
-                BattleId = currentBattleInfo.Id
-            }, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _battlesCache.AddBattleUserAsync(currentBattleInfo.Id, request.UserId);
 
             return new EnqueueToBattleResponse
             {

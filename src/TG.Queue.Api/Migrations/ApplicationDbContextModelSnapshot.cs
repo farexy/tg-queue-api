@@ -56,39 +56,6 @@ namespace TG.Queue.Api.Migrations
 
                     b.ToTable("battles");
                 });
-
-            modelBuilder.Entity("TG.Queue.Api.Entities.BattleUser", b =>
-                {
-                    b.Property<Guid>("BattleId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("battle_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("BattleId", "UserId")
-                        .HasName("pk_battle_users");
-
-                    b.ToTable("battle_users");
-                });
-
-            modelBuilder.Entity("TG.Queue.Api.Entities.BattleUser", b =>
-                {
-                    b.HasOne("TG.Queue.Api.Entities.Battle", "Battle")
-                        .WithMany("Users")
-                        .HasForeignKey("BattleId")
-                        .HasConstraintName("fk_battle_users_battles_battle_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Battle");
-                });
-
-            modelBuilder.Entity("TG.Queue.Api.Entities.Battle", b =>
-                {
-                    b.Navigation("Users");
-                });
 #pragma warning restore 612, 618
         }
     }

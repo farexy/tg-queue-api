@@ -23,31 +23,10 @@ namespace TG.Queue.Api.Migrations
                 {
                     table.PrimaryKey("pk_battles", x => x.id);
                 });
-
-            migrationBuilder.CreateTable(
-                name: "battle_users",
-                columns: table => new
-                {
-                    battle_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_battle_users", x => new { x.battle_id, x.user_id });
-                    table.ForeignKey(
-                        name: "fk_battle_users_battles_battle_id",
-                        column: x => x.battle_id,
-                        principalTable: "battles",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "battle_users");
-
             migrationBuilder.DropTable(
                 name: "battles");
         }

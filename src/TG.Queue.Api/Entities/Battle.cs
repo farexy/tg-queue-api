@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace TG.Queue.Api.Entities
 {
@@ -18,7 +17,5 @@ namespace TG.Queue.Api.Entities
         public DateTime CreatedAt { get; set; }
 
         public DateTime ExpectedStartTime { get; set; }
-        
-        public IReadOnlyList<BattleUser>? Users { get; set; }
     }
 }
