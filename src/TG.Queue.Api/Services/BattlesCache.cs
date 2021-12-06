@@ -8,7 +8,7 @@ using TG.Queue.Api.Entities;
 
 namespace TG.Queue.Api.Services
 {
-    public interface IBattlesCache
+    public interface IBattlesStorage
     {
         Task InitCurrentUsersAsync(string battleType, int userCount, int expirationSec);
         Task<long> IncrementCurrentUsersAsync(string battleType, int userCount);
@@ -24,7 +24,7 @@ namespace TG.Queue.Api.Services
         Task ClearBattleAsync(Guid battleId);
     }
 
-    public class BattlesCache : IBattlesCache
+    public class BattlesStorage : IBattlesStorage
     {
         private const string CurrentBattlePrefix = "q_current_battle_";
         private const string CurrentUsersPrefix = "q_current_battle_users_";
@@ -32,7 +32,7 @@ namespace TG.Queue.Api.Services
         private const string BattlePrefix = "q_battle_";
         private readonly IDatabase _redis;
 
-        public BattlesCache(IDatabase redis)
+        public BattlesStorage(IDatabase redis)
         {
             _redis = redis;
         }

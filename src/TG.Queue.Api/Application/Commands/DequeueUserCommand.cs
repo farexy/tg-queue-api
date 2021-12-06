@@ -11,18 +11,18 @@ namespace TG.Queue.Api.Application.Commands
     
     public class DequeueUserCommandHandler : IRequestHandler<DequeueUserCommand, OperationResult>
     {
-        private readonly IBattlesCache _battlesCache;
+        private readonly IBattlesStorage _battlesStorage;
 
-        public DequeueUserCommandHandler(IBattlesCache battlesCache)
+        public DequeueUserCommandHandler(IBattlesStorage battlesStorage)
         {
-            _battlesCache = battlesCache;
+            _battlesStorage = battlesStorage;
         }
 
         public async Task<OperationResult> Handle(DequeueUserCommand request, CancellationToken cancellationToken)
         {
             await Task.WhenAll(
-                _battlesCache.DecrementCurrentUsersAsync(request.BattleType, 1),
-                _battlesCache.RemoveBattleUserAsync(request.BattleId, request.UserId)
+                _battlesStorage.DecrementCurrentUsersAsync(request.BattleType, 1),
+                _battlesStorage.RemoveBattleUserAsync(request.BattleId, request.UserId)
             );
 
             return OperationResult.Success();

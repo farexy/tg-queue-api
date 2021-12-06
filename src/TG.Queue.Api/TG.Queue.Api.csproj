@@ -10,11 +10,7 @@
         <PackageReference Include="MediatR" Version="9.0.0" />
         <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="9.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning" Version="5.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.11">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.13.1" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.14.1" />
         <PackageReference Include="TG.Core.App" Version="1.0.22" />
         <PackageReference Include="TG.Core.Redis" Version="1.0.3" />
         <PackageReference Include="TG.Core.ServiceBus" Version="1.0.11" />

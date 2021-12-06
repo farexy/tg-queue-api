@@ -28,17 +28,17 @@ namespace TG.Queue.Api.Application.Commands
         private readonly BattleSettings _battleSettings;
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IUsersClient _usersClient;
-        private readonly IBattlesCache _battlesCache;
+        private readonly IBattlesStorage _battlesStorage;
 
         public EnqueueUserCommandHandler(IQueueProducer<PrepareBattleMessage> queueProducer, IDistributedLock distributedLock,
             IOptionsSnapshot<BattleSettings> battleSettings, IDateTimeProvider dateTimeProvider,
-            IUsersClient usersClient, IBattlesCache battlesCache)
+            IUsersClient usersClient, IBattlesStorage battlesStorage)
         {
             _queueProducer = queueProducer;
             _distributedLock = distributedLock;
             _dateTimeProvider = dateTimeProvider;
             _usersClient = usersClient;
-            _battlesCache = battlesCache;
+            _battlesStorage = battlesStorage;
             _battleSettings = battleSettings.Value;
         }
 
@@ -61,7 +61,7 @@ namespace TG.Queue.Api.Application.Commands
                 return TestBattleResult(request);
             }
 
-            var currentUsersCount = await _battlesCache.IncrementCurrentUsersAsync(request.BattleType, 1);
+            var currentUsersCount = await _battlesStorage.IncrementCurrentUsersAsync(request.BattleType, 1);
             var battleSettings = _battleSettings.BattleTypes[request.BattleType];
 
             CurrentBattleInfo? currentBattleInfo;
@@ -71,11 +71,11 @@ namespace TG.Queue.Api.Application.Commands
             }
             else
             {
-                currentBattleInfo = await _battlesCache.GetCurrentAsync(request.BattleType)
+                currentBattleInfo = await _battlesStorage.GetCurrentAsync(request.BattleType)
                                     ?? await TryCreateBattle(request.BattleType, battleSettings);
             }
 
-            await _battlesCache.AddBattleUserAsync(currentBattleInfo.Id, request.UserId);
+            await _battlesStorage.AddBattleUserAsync(currentBattleInfo.Id, request.UserId);
 
             return new EnqueueToBattleResponse
             {
@@ -89,7 +89,7 @@ namespace TG.Queue.Api.Application.Commands
         {
             await using (await _distributedLock.AcquireLockAsync(battleType))
             {
-                var currentBattleInfo = await _battlesCache.GetCurrentAsync(battleType);
+                var currentBattleInfo = await _battlesStorage.GetCurrentAsync(battleType);
                 if (currentBattleInfo is null)
                 {
                     var newBattle = new Battle
@@ -113,11 +113,11 @@ namespace TG.Queue.Api.Application.Commands
                                 BattleId = newBattle.Id,
                                 BattleType = battleType
                             }),
-                        _battlesCache.InitCurrentUsersAsync(battleType, 1,
+                        _battlesStorage.InitCurrentUsersAsync(battleType, 1,
                             battleSettings.ExpectedWaitingTimeSec),
-                        _battlesCache.SetCurrentAsync(battleType, currentBattleInfo,
+                        _battlesStorage.SetCurrentAsync(battleType, currentBattleInfo,
                             battleSettings.ExpectedWaitingTimeSec),
-                        _battlesCache.SetAsync(newBattle)
+                        _battlesStorage.SetAsync(newBattle)
                     );
                 }
 

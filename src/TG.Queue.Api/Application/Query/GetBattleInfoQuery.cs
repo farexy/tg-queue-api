@@ -26,17 +26,17 @@ namespace TG.Queue.Api.Application.Query
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IBattleServersClient _battleServersClient;
         private readonly IBattlesClient _battlesClient;
-        private readonly IBattlesCache _battlesCache;
+        private readonly IBattlesStorage _battlesStorage;
 
         public GetBattleInfoQueryHandler(IDistributedLock distributedLock, IOptionsSnapshot<BattleSettings> battleSettings,
-            IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient, IBattlesCache battlesCache)
+            IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient, IBattlesStorage battlesStorage)
         {
             _distributedLock = distributedLock;
             _battleSettings = battleSettings.Value;
             _dateTimeProvider = dateTimeProvider;
             _battleServersClient = battleServersClient;
             _battlesClient = battlesClient;
-            _battlesCache = battlesCache;
+            _battlesStorage = battlesStorage;
         }
 
         public async Task<OperationResult<BattleInfoResponse>> Handle(GetBattleInfoQuery request, CancellationToken cancellationToken)
@@ -46,12 +46,12 @@ namespace TG.Queue.Api.Application.Query
                 return TestBattleResult(request.BattleId);
             }
 
-            if (!await _battlesCache.IsUserInBattleAsync(request.BattleId, request.UserId))
+            if (!await _battlesStorage.IsUserInBattleAsync(request.BattleId, request.UserId))
             {
                 return AppErrors.NotFound;
             }
 
-            var battle = await _battlesCache.FindAsync(request.BattleId);
+            var battle = await _battlesStorage.FindAsync(request.BattleId);
             if (battle is null)
             {
                 return AppErrors.NotFound;
@@ -71,7 +71,7 @@ namespace TG.Queue.Api.Application.Query
 
                 await using (await _distributedLock.AcquireLockAsync(battle.Id.ToString()))
                 {
-                    battle = await _battlesCache.FindAsync(request.BattleId)!;
+                    battle = await _battlesStorage.FindAsync(request.BattleId)!;
                     if (battle is not null && battle.Open)
                     {
                         var res = await _battleServersClient.GetBattleServerAsync(battle.Id);
@@ -96,9 +96,9 @@ namespace TG.Queue.Api.Application.Query
                         battle.ServerIp = battleServer.LoadBalancerIp;
                         battle.ServerPort = battleServer.LoadBalancerPort;
 
-                        var userIds = await _battlesCache.GetBattleUsers(battle.Id);
+                        var userIds = await _battlesStorage.GetBattleUsers(battle.Id);
                         await Task.WhenAll(
-                            _battlesCache.SetAsync(battle),
+                            _battlesStorage.SetAsync(battle),
                             _battlesClient.CreateAsync(new CreateBattleDto
                             {
                                 BattleId = battle.Id,

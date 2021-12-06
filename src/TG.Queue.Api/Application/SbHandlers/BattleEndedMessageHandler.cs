@@ -8,16 +8,16 @@ namespace TG.Queue.Api.Application.SbHandlers
 {
     public class BattleEndedMessageHandler : IMessageHandler<BattleEndedMessage>
     {
-        private readonly IBattlesCache _battlesCache;
+        private readonly IBattlesStorage _battlesStorage;
 
-        public BattleEndedMessageHandler(IBattlesCache battlesCache)
+        public BattleEndedMessageHandler(IBattlesStorage battlesStorage)
         {
-            _battlesCache = battlesCache;
+            _battlesStorage = battlesStorage;
         }
 
         public async Task HandleMessage(BattleEndedMessage message, CancellationToken cancellationToken)
         {
-            await _battlesCache.ClearBattleAsync(message.BattleId);
+            await _battlesStorage.ClearBattleAsync(message.BattleId);
         }
     }
 }
