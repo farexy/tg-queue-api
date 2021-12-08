@@ -13,6 +13,7 @@ using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Entities;
 using TG.Queue.Api.Entities.Enums;
 using TG.Queue.Api.Errors;
+using TG.Queue.Api.Extensions;
 using TG.Queue.Api.Models.Response;
 using TG.Queue.Api.ServiceClients;
 using TG.Queue.Api.Services;
@@ -80,7 +81,7 @@ namespace TG.Queue.Api.Application.Commands
             return new EnqueueToBattleResponse
             {
                 BattleId = currentBattleInfo.Id,
-                ExpectedWaitingTimeSec = currentBattleInfo.ExpectedStartTime.Subtract(_dateTimeProvider.UtcNow).Seconds,
+                ExpectedWaitingTimeSec = currentBattleInfo.ExpectedStartTime.GetWaitingTimeSec(_dateTimeProvider),
                 ApproximateCurrentUsersCount = currentUsersCount,
             };
         }

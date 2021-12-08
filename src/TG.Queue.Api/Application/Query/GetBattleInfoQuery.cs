@@ -9,6 +9,7 @@ using TG.Core.App.Services;
 using TG.Core.Redis.DistributedLock;
 using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Errors;
+using TG.Queue.Api.Extensions;
 using TG.Queue.Api.Helpers;
 using TG.Queue.Api.Models.Dto;
 using TG.Queue.Api.Models.Response;
@@ -65,7 +66,7 @@ namespace TG.Queue.Api.Application.Query
                     {
                         Id = battle.Id,
                         Ready = false,
-                        ExpectedWaitingTimeSec = battle.ExpectedStartTime.Subtract(_dateTimeProvider.UtcNow).Seconds,
+                        ExpectedWaitingTimeSec = battle.ExpectedStartTime.GetWaitingTimeSec(_dateTimeProvider),
                     };
                 }
 

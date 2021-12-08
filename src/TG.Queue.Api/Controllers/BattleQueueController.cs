@@ -46,9 +46,9 @@ namespace TG.Queue.Api.Controllers
         }
         
         [HttpDelete("{battleId}")]
-        public async Task<ActionResult> Dequeue([FromRoute] Guid battleId, [FromQuery] string battleType)
+        public async Task<ActionResult> Dequeue([FromRoute] Guid battleId)
         {
-            var cmd = new DequeueUserCommand(User.GetUserId(), battleType, battleId);
+            var cmd = new DequeueUserCommand(User.GetUserId(), battleId);
             var result = await _mediator.Send(cmd);
             return result.ToActionResult()
                 .NoContent();
