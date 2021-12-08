@@ -7,7 +7,7 @@ namespace TG.Queue.Api.Config.Options
     public class BattleSettings
     {
         public Dictionary<string, BattleTypeSettings> BattleTypes { get; set; } = default!;
-        public Dictionary<BattleServerType, TestServerSettings> TestServers { get; set; } = default!;
+        public Dictionary<string, TestServerSettings> TestServers { get; set; } = default!;
     }
     
     public class BattleTypeSettings
@@ -21,7 +21,7 @@ namespace TG.Queue.Api.Config.Options
 
     public class TestServerSettings
     {
-        public Guid Id { get; set; }
+        public BattleServerType Type { get; set; }
 
         public string Ip { get; set; } = default!;
         

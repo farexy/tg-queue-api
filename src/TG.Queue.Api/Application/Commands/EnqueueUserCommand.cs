@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.Extensions.Options;
-using TG.Core.App.Extensions;
 using TG.Core.App.OperationResults;
 using TG.Core.App.Services;
 using TG.Core.Redis.DistributedLock;
@@ -11,7 +10,6 @@ using TG.Core.ServiceBus;
 using TG.Core.ServiceBus.Messages;
 using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Entities;
-using TG.Queue.Api.Entities.Enums;
 using TG.Queue.Api.Errors;
 using TG.Queue.Api.Extensions;
 using TG.Queue.Api.Models.Response;
@@ -20,7 +18,7 @@ using TG.Queue.Api.Services;
 
 namespace TG.Queue.Api.Application.Commands
 {
-    public record EnqueueUserCommand(Guid UserId, string BattleType, BattleServerType ServerType) : IRequest<OperationResult<EnqueueToBattleResponse>>;
+    public record EnqueueUserCommand(Guid UserId, string BattleType, Guid? TestBattleId) : IRequest<OperationResult<EnqueueToBattleResponse>>;
     
     public class EnqueueUserCommandHandler : IRequestHandler<EnqueueUserCommand, OperationResult<EnqueueToBattleResponse>>
     {
@@ -30,22 +28,27 @@ namespace TG.Queue.Api.Application.Commands
         private readonly IDateTimeProvider _dateTimeProvider;
         private readonly IUsersClient _usersClient;
         private readonly IBattlesStorage _battlesStorage;
+        private readonly ITestBattlesHelper _testBattlesHelper;
 
         public EnqueueUserCommandHandler(IQueueProducer<PrepareBattleMessage> queueProducer, IDistributedLock distributedLock,
             IOptionsSnapshot<BattleSettings> battleSettings, IDateTimeProvider dateTimeProvider,
-            IUsersClient usersClient, IBattlesStorage battlesStorage)
+            IUsersClient usersClient, IBattlesStorage battlesStorage, ITestBattlesHelper testBattlesHelper)
         {
             _queueProducer = queueProducer;
             _distributedLock = distributedLock;
             _dateTimeProvider = dateTimeProvider;
             _usersClient = usersClient;
             _battlesStorage = battlesStorage;
+            _testBattlesHelper = testBattlesHelper;
             _battleSettings = battleSettings.Value;
         }
 
-        public async Task<OperationResult<EnqueueToBattleResponse>> Handle(EnqueueUserCommand request,
-            CancellationToken cancellationToken)
+        public async Task<OperationResult<EnqueueToBattleResponse>> Handle(EnqueueUserCommand request, CancellationToken cancellationToken)
         {
+            if (!_testBattlesHelper.IsTestServerAllowed(request.TestBattleId))
+            {
+                return AppErrors.TestServerNotAllowed;
+            }
             var moneyCheck = await _usersClient.CheckMoneyAsync(request.UserId, request.BattleType);
             if (moneyCheck.HasError)
             {
@@ -57,23 +60,18 @@ namespace TG.Queue.Api.Application.Commands
                 return AppErrors.UserNotEnoughMoney;
             }
 
-            if (request.ServerType.In(BattleServerType.Local, BattleServerType.Static))
-            {
-                return TestBattleResult(request);
-            }
-
             var currentUsersCount = await _battlesStorage.IncrementCurrentUsersAsync(request.BattleType, 1);
             var battleSettings = _battleSettings.BattleTypes[request.BattleType];
 
             CurrentBattleInfo? currentBattleInfo;
             if (currentUsersCount == 1 || currentUsersCount > battleSettings.UsersCount)
             {
-                currentBattleInfo = await TryCreateBattle(request.BattleType, battleSettings);
+                currentBattleInfo = await TryCreateBattle(request.BattleType, request.TestBattleId, battleSettings);
             }
             else
             {
                 currentBattleInfo = await _battlesStorage.GetCurrentAsync(request.BattleType)
-                                    ?? await TryCreateBattle(request.BattleType, battleSettings);
+                                    ?? await TryCreateBattle(request.BattleType, request.TestBattleId, battleSettings);
             }
 
             await _battlesStorage.AddBattleUserAsync(currentBattleInfo.Id, request.UserId);
@@ -86,7 +84,7 @@ namespace TG.Queue.Api.Application.Commands
             };
         }
 
-        private async Task<CurrentBattleInfo> TryCreateBattle(string battleType, BattleTypeSettings battleSettings)
+        private async Task<CurrentBattleInfo> TryCreateBattle(string battleType, Guid? testBattleId, BattleTypeSettings battleSettings)
         {
             await using (await _distributedLock.AcquireLockAsync(battleType))
             {
@@ -95,7 +93,7 @@ namespace TG.Queue.Api.Application.Commands
                 {
                     var newBattle = new Battle
                     {
-                        Id = Guid.NewGuid(),
+                        Id = testBattleId ?? Guid.NewGuid(),
                         Open = true,
                         BattleType = battleType,
                         CreatedAt = _dateTimeProvider.UtcNow,
@@ -114,26 +112,14 @@ namespace TG.Queue.Api.Application.Commands
                                 BattleId = newBattle.Id,
                                 BattleType = battleType
                             }),
-                        _battlesStorage.InitCurrentUsersAsync(battleType, 1,
-                            battleSettings.ExpectedWaitingTimeSec),
-                        _battlesStorage.SetCurrentAsync(battleType, currentBattleInfo,
-                            battleSettings.ExpectedWaitingTimeSec),
+                        _battlesStorage.InitCurrentUsersAsync(battleType, 1, battleSettings.ExpectedWaitingTimeSec),
+                        _battlesStorage.SetCurrentAsync(battleType, currentBattleInfo, battleSettings.ExpectedWaitingTimeSec),
                         _battlesStorage.SetAsync(newBattle)
                     );
                 }
 
                 return currentBattleInfo;
             }
-        }
-
-        private EnqueueToBattleResponse TestBattleResult(EnqueueUserCommand cmd)
-        {
-            var settings = _battleSettings.TestServers[cmd.ServerType];
-            return new EnqueueToBattleResponse
-            {
-                BattleId = settings.Id,
-                ExpectedWaitingTimeSec = settings.ExpectedWaitingTimeSec
-            };
         }
     }
 }

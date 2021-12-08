@@ -70,6 +70,7 @@ namespace TG.Queue.Api
 
             services.AddTgRedis(Configuration);
             services.AddTransient<IBattlesStorage, BattlesStorage>();
+            services.AddSingleton<ITestBattlesHelper, TestBattlesHelper>();
 
             services.AddServiceBus(Configuration)
                 .AddQueueProducer<PrepareBattleMessage>()

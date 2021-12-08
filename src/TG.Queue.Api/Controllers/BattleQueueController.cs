@@ -39,7 +39,7 @@ namespace TG.Queue.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<EnqueueToBattleResponse>> Enqueue([FromBody] EnqueueUserRequest request)
         {
-            var cmd = new EnqueueUserCommand(User.GetUserId(), request.BattleType, request.ServerType);
+            var cmd = new EnqueueUserCommand(User.GetUserId(), request.BattleType, request.TestBattleId);
             var result = await _mediator.Send(cmd);
             return result.ToActionResult()
                 .Ok();

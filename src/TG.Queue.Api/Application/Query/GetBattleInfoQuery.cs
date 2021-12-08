@@ -42,11 +42,6 @@ namespace TG.Queue.Api.Application.Query
 
         public async Task<OperationResult<BattleInfoResponse>> Handle(GetBattleInfoQuery request, CancellationToken cancellationToken)
         {
-            if (TestBattles.IsTest(request.BattleId))
-            {
-                return TestBattleResult(request.BattleId);
-            }
-
             if (!await _battlesStorage.IsUserInBattleAsync(request.BattleId, request.UserId))
             {
                 return AppErrors.NotFound;
@@ -117,18 +112,6 @@ namespace TG.Queue.Api.Application.Query
                 ServerPort = battle.ServerPort,
                 Ready = true,
                 AccessToken = null, // todo
-            };
-        }
-        
-        private BattleInfoResponse TestBattleResult(Guid battleId)
-        {
-            var settings = _battleSettings.TestServers.First(b => b.Value.Id == battleId).Value;
-            return new BattleInfoResponse
-            {
-                Id = battleId,
-                ServerIp = settings.Ip,
-                ServerPort = settings.Port,
-                Ready = true
             };
         }
     }
