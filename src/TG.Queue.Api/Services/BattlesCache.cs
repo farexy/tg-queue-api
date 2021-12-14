@@ -18,6 +18,7 @@ namespace TG.Queue.Api.Services
         Task<Battle?> FindAsync(Guid battleId);
         Task SetAsync(Battle battle);
         Task AddBattleUserAsync(Guid battleId, Guid userId);
+        Task InitBattleUsersAsync(Guid battleId, Guid userId);
         Task RemoveBattleUserAsync(Guid battleId, Guid userId);
         Task<bool> IsUserInBattleAsync(Guid battleId, Guid userId);
         Task<IEnumerable<Guid>> GetBattleUsers(Guid battleId);
@@ -80,7 +81,14 @@ namespace TG.Queue.Api.Services
         {
             return _redis.SetAddAsync(BattleUsersPrefix + battleId, userId.ToString());
         }
-        
+
+        public async Task InitBattleUsersAsync(Guid battleId, Guid userId)
+        {
+            await AddBattleUserAsync(battleId, userId);
+            const int battleExpirationMin = 1;
+            await _redis.KeyExpireAsync(BattleUsersPrefix + battleId, TimeSpan.FromMinutes(battleExpirationMin));
+        }
+
         public Task RemoveBattleUserAsync(Guid battleId, Guid userId)
         {
             return _redis.SetRemoveAsync(BattleUsersPrefix + battleId, userId.ToString());

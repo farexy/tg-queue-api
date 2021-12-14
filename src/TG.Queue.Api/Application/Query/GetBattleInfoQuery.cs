@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -10,7 +9,6 @@ using TG.Core.Redis.DistributedLock;
 using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.Errors;
 using TG.Queue.Api.Extensions;
-using TG.Queue.Api.Helpers;
 using TG.Queue.Api.Models.Dto;
 using TG.Queue.Api.Models.Response;
 using TG.Queue.Api.ServiceClients;
