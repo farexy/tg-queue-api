@@ -60,18 +60,19 @@ namespace TG.Queue.Api.Application.Commands
                 return AppErrors.UserNotEnoughMoney;
             }
 
-            var currentUsersCount = await _battlesStorage.IncrementCurrentUsersAsync(request.BattleType, 1);
+            var currentUsersCount = await _battlesStorage.IncrementCurrentUsersAsync(
+                _testBattlesHelper.CurrentBattleKey(request.BattleType, request.TestBattleId), 1);
             var battleSettings = _battleSettings.BattleTypes[request.BattleType];
 
             CurrentBattleInfo? currentBattleInfo;
             if (currentUsersCount == 1 || currentUsersCount > battleSettings.UsersCount)
             {
-                currentBattleInfo = await TryCreateBattle(request.BattleType, request.TestBattleId, battleSettings);
+                currentBattleInfo = await TryCreateBattle(request, battleSettings);
             }
             else
             {
                 currentBattleInfo = await _battlesStorage.GetCurrentAsync(request.BattleType)
-                                    ?? await TryCreateBattle(request.BattleType, request.TestBattleId, battleSettings);
+                                    ?? await TryCreateBattle(request, battleSettings);
             }
 
             await _battlesStorage.AddBattleUserAsync(currentBattleInfo.Id, request.UserId);
@@ -84,20 +85,25 @@ namespace TG.Queue.Api.Application.Commands
             };
         }
 
-        private async Task<CurrentBattleInfo> TryCreateBattle(string battleType, Guid? testBattleId, BattleTypeSettings battleSettings)
+        private async Task<CurrentBattleInfo> TryCreateBattle(EnqueueUserCommand command, BattleTypeSettings battleSettings)
         {
-            await using (await _distributedLock.AcquireLockAsync(battleType))
+            var (userId, battleType, testBattleId) = command;
+            var currentBattleKey = _testBattlesHelper.CurrentBattleKey(battleType, testBattleId);
+            await using (await _distributedLock.AcquireLockAsync(currentBattleKey))
             {
-                var currentBattleInfo = await _battlesStorage.GetCurrentAsync(battleType);
+                var currentBattleInfo = await _battlesStorage.GetCurrentAsync(currentBattleKey);
                 if (currentBattleInfo is null)
                 {
+                    int waitingSec = testBattleId.HasValue
+                        ? _testBattlesHelper.GetWaitingTimeSec(testBattleId.Value)
+                        : battleSettings.ExpectedWaitingTimeSec;
                     var newBattle = new Battle
                     {
                         Id = testBattleId ?? Guid.NewGuid(),
                         Open = true,
                         BattleType = battleType,
                         CreatedAt = _dateTimeProvider.UtcNow,
-                        ExpectedStartTime = _dateTimeProvider.UtcNow.AddSeconds(battleSettings.ExpectedWaitingTimeSec)
+                        ExpectedStartTime = _dateTimeProvider.UtcNow.AddSeconds(waitingSec)
                     };
 
                     currentBattleInfo = new CurrentBattleInfo
@@ -112,9 +118,10 @@ namespace TG.Queue.Api.Application.Commands
                                 BattleId = newBattle.Id,
                                 BattleType = battleType
                             }),
-                        _battlesStorage.InitCurrentUsersAsync(battleType, 1, battleSettings.ExpectedWaitingTimeSec),
-                        _battlesStorage.SetCurrentAsync(battleType, currentBattleInfo, battleSettings.ExpectedWaitingTimeSec),
-                        _battlesStorage.SetAsync(newBattle)
+                        _battlesStorage.InitCurrentUsersAsync(currentBattleKey, 1, waitingSec),
+                        _battlesStorage.SetCurrentAsync(currentBattleKey, currentBattleInfo, waitingSec),
+                        _battlesStorage.SetAsync(newBattle),
+                        _battlesStorage.InitBattleUsersAsync(newBattle.Id, userId)
                     );
                 }
 

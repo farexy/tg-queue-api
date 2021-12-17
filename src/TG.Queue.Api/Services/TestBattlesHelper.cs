@@ -22,5 +22,12 @@ namespace TG.Queue.Api.Services
             return !testBattleId.HasValue ||
                    _hostEnvironment.IsDevelopmentOrDebug() && _battleSettings.TestServers.ContainsKey(testBattleId.Value.ToString());
         }
+
+        public int GetWaitingTimeSec(Guid testBattleId)
+        {
+            return _battleSettings.TestServers[testBattleId.ToString()].ExpectedWaitingTimeSec;
+        }
+
+        public string CurrentBattleKey(string battleType, Guid? testBattleId) => battleType + testBattleId;
     }
 }
