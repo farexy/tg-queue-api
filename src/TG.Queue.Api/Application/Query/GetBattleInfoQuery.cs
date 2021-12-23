@@ -75,7 +75,7 @@ namespace TG.Queue.Api.Application.Query
                         }
 
                         var battleServer = res.Result!;
-                        if (battleServer.State is BattleServerState.Initializing || battleServer.LoadBalancerIp is null)
+                        if (battleServer.State is BattleServerState.Initializing || battleServer.Ip is null)
                         {
                             var settings = _battleSettings.BattleTypes[battle.BattleType];
                             return new BattleInfoResponse
@@ -87,8 +87,8 @@ namespace TG.Queue.Api.Application.Query
                         }
 
                         battle.Open = false;
-                        battle.ServerIp = battleServer.LoadBalancerIp;
-                        battle.ServerPort = battleServer.LoadBalancerPort;
+                        battle.ServerIp = battleServer.Ip;
+                        battle.ServerPort = battleServer.Port;
 
                         var userIds = await _battlesStorage.GetBattleUsers(battle.Id);
                         await Task.WhenAll(
