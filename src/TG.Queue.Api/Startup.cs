@@ -13,7 +13,6 @@ using TG.Core.App.Swagger;
 using TG.Core.Redis.Extensions;
 using TG.Core.ServiceBus.Extensions;
 using TG.Core.ServiceBus.Messages;
-using TG.Queue.Api.Application.SbHandlers;
 using TG.Queue.Api.Config;
 using TG.Queue.Api.Config.Options;
 using TG.Queue.Api.ServiceClients;
@@ -73,8 +72,7 @@ namespace TG.Queue.Api
             services.AddScoped<ITestBattlesHelper, TestBattlesHelper>();
 
             services.AddServiceBus(Configuration)
-                .AddQueueProducer<PrepareBattleMessage>()
-                .AddQueueConsumer<BattleEndedMessage, BattleEndedMessageHandler>();
+                .AddQueueProducer<PrepareBattleMessage>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

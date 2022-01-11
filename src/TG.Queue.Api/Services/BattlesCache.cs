@@ -22,7 +22,6 @@ namespace TG.Queue.Api.Services
         Task RemoveBattleUserAsync(Guid battleId, Guid userId);
         Task<bool> IsUserInBattleAsync(Guid battleId, Guid userId);
         Task<IEnumerable<Guid>> GetBattleUsers(Guid battleId);
-        Task ClearBattleAsync(Guid battleId);
     }
 
     public class BattlesStorage : IBattlesStorage
@@ -103,13 +102,6 @@ namespace TG.Queue.Api.Services
         {
             var members = await _redis.SetMembersAsync(BattleUsersPrefix + battleId);
             return members.Select(id => Guid.Parse(id));
-        }
-        
-        public Task ClearBattleAsync(Guid battleId)
-        {
-            return Task.WhenAll(
-                _redis.KeyDeleteAsync(BattlePrefix + battleId),
-                _redis.KeyDeleteAsync(BattleUsersPrefix + battleId));
         }
     }
 }
