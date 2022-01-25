@@ -19,7 +19,7 @@ variables:
 'Test code':
   extends: .code_prep
   stage: test
-  image: mcr.microsoft.com/dotnet/sdk:5.0
+  image: mcr.microsoft.com/dotnet/sdk:6.0
   script:
       - dotnet build
   only:
