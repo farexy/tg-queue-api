@@ -55,6 +55,7 @@ namespace TG.Queue.Api
 
             services.ConfigureInternalCalls(Configuration);
             services.Configure<BattleSettings>(Configuration.GetSection(TgConfigs.BattleSettings));
+            services.Configure<BattleJwtTokenOptions>(Configuration.GetSection(nameof(BattleJwtTokenOptions)));
 
             services.AddServiceClient<IBattleServersClient>(Configuration.GetServiceInternalUrl(TgServices.Manager));
             services.AddServiceClient<IBattlesClient>(Configuration.GetServiceInternalUrl(TgServices.Game));
@@ -70,6 +71,7 @@ namespace TG.Queue.Api
             services.AddTgRedis(Configuration);
             services.AddTransient<IBattlesStorage, BattlesStorage>();
             services.AddScoped<ITestBattlesHelper, TestBattlesHelper>();
+            services.AddTransient<ITokenService, TokenService>();
 
             services.AddServiceBus(Configuration)
                 .AddQueueProducer<PrepareBattleMessage>();

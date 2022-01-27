@@ -26,9 +26,11 @@ namespace TG.Queue.Api.Application.Query
         private readonly IBattleServersClient _battleServersClient;
         private readonly IBattlesClient _battlesClient;
         private readonly IBattlesStorage _battlesStorage;
+        private readonly ITokenService _tokenService;
 
         public GetBattleInfoQueryHandler(IDistributedLock distributedLock, IOptionsSnapshot<BattleSettings> battleSettings,
-            IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient, IBattlesStorage battlesStorage)
+            IDateTimeProvider dateTimeProvider, IBattleServersClient battleServersClient, IBattlesClient battlesClient,
+            IBattlesStorage battlesStorage, ITokenService tokenService)
         {
             _distributedLock = distributedLock;
             _battleSettings = battleSettings.Value;
@@ -36,6 +38,7 @@ namespace TG.Queue.Api.Application.Query
             _battleServersClient = battleServersClient;
             _battlesClient = battlesClient;
             _battlesStorage = battlesStorage;
+            _tokenService = tokenService;
         }
 
         public async Task<OperationResult<BattleInfoResponse>> Handle(GetBattleInfoQuery request, CancellationToken cancellationToken)
@@ -109,7 +112,7 @@ namespace TG.Queue.Api.Application.Query
                 ServerIp = battle.ServerIp,
                 ServerPort = battle.ServerPort,
                 Ready = true,
-                AccessToken = null, // todo
+                AccessToken = _tokenService.GenerateBattleAccessToken(request.UserId, battle.Id)
             };
         }
     }
