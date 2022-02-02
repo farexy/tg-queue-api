@@ -71,7 +71,7 @@ namespace TG.Queue.Api.Application.Query
                     battle = await _battlesStorage.FindAsync(request.BattleId)!;
                     if (battle is not null && battle.Open)
                     {
-                        var res = await _battleServersClient.GetBattleServerAsync(battle.Id);
+                        var res = await _battleServersClient.GetAsync(battle.Id);
                         if (res.HasError)
                         {
                             return res.Error!;

@@ -9,6 +9,9 @@ namespace TG.Queue.Api.ServiceClients
     public interface IBattleServersClient
     {
         [Get("v1/BattleServers/{battleId}")]
-        Task<OperationResult<BattleServerDto>> GetBattleServerAsync([Path] Guid battleId);
+        Task<OperationResult<BattleServerDto>> GetAsync([Path] Guid battleId);
+        
+        [Post("v1/BattleServers")]
+        Task<OperationResult<BattleServerDto>> AllocateAsync();
     }
 }

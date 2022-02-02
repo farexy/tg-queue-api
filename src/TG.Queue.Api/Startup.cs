@@ -72,9 +72,6 @@ namespace TG.Queue.Api
             services.AddTransient<IBattlesStorage, BattlesStorage>();
             services.AddScoped<ITestBattlesHelper, TestBattlesHelper>();
             services.AddTransient<ITokenService, TokenService>();
-
-            services.AddServiceBus(Configuration)
-                .AddQueueProducer<PrepareBattleMessage>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
