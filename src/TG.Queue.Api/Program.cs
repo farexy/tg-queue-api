@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TG.Core.App.Configuration;
 using TG.Core.App.Configuration.TgConfig;
 using TG.Queue.Api.Config;
-using TG.Queue.Api.Helpers;
 
 namespace TG.Queue.Api
 {
@@ -19,9 +19,14 @@ namespace TG.Queue.Api
                 .ConfigureTgKeyVault()
                 .ConfigureAppConfiguration((ctx, configuration) =>
                 {
-                    TestBattles.Init(ctx.HostingEnvironment);
                     configuration.AddTgConfigs(TgConfigs.BattleSettings);
                 })
+                .ConfigureLogging(logging => logging.AddSimpleConsole(c =>
+                    {
+                        c.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
+                        c.UseUtcTimestamp = true;
+                    }
+                ))
                 //.ConfigureTgLogging(ServiceConst.ServiceName)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
